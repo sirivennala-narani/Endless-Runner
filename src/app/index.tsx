@@ -39,6 +39,7 @@ type PhysicsState = {
 };
 
 export default function HomeScreen() {
+  const [gameStarted, setGameStarted] = useState(false);
   const [playerY, setPlayerY] = useState(0);
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
   const [score, setScore] = useState(0);
@@ -97,7 +98,7 @@ export default function HomeScreen() {
   }, [obstacleWobble]);
 
   useEffect(() => {
-    if (isGameOver) {
+    if (!gameStarted || isGameOver) {
       if (gameLoopRef.current) clearInterval(gameLoopRef.current);
       return;
     }
@@ -136,8 +137,7 @@ export default function HomeScreen() {
 
         const playerLeft = PLAYER_LEFT;
         const playerRight = playerLeft + PLAYER_SIZE;
-        const playerTop =
-          SCREEN_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE - physics.y;
+        const playerTop = SCREEN_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE - physics.y;
         const playerBottom = playerTop + PLAYER_SIZE;
 
         const hit = moved.some((obstacle) => {
@@ -168,7 +168,7 @@ export default function HomeScreen() {
     return () => {
       if (gameLoopRef.current) clearInterval(gameLoopRef.current);
     };
-  }, [isGameOver]);
+  }, [gameStarted, isGameOver]);
 
   useEffect(() => {
     if (score > highScore) {
@@ -179,13 +179,26 @@ export default function HomeScreen() {
 
   const jump = () => {
     const physics = physicsRef.current;
-
     if (isGameOver) return;
     if (physics.jumpsLeft <= 0) return;
 
     physics.velocity = JUMP_FORCE;
     physics.jumping = true;
     physics.jumpsLeft -= 1;
+  };
+
+  const startGame = () => {
+    physicsRef.current = {
+      y: 0,
+      velocity: 0,
+      jumping: false,
+      jumpsLeft: MAX_JUMPS,
+    };
+    setPlayerY(0);
+    setObstacles([]);
+    setScore(0);
+    setIsGameOver(false);
+    setGameStarted(true);
   };
 
   const restartGame = () => {
@@ -195,12 +208,36 @@ export default function HomeScreen() {
       jumping: false,
       jumpsLeft: MAX_JUMPS,
     };
-
     setPlayerY(0);
     setObstacles([]);
     setScore(0);
     setIsGameOver(false);
   };
+
+  const playerTranslateY = playerFloat.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -3],
+  });
+
+  if (!gameStarted) {
+    return (
+      <LinearGradient
+        colors={["#0F172A", "#111827", "#1F2937"]}
+        style={styles.container}
+      >
+        <View style={styles.centerScreen}>
+          <View style={styles.card}>
+            <Text style={styles.gameOverTitle}>Endless Runner</Text>
+            <Text style={styles.finalScore}>Tap Start to play</Text>
+
+            <TouchableOpacity style={styles.restartButton} onPress={startGame}>
+              <Text style={styles.buttonText}>Start Game</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   if (isGameOver) {
     return (
@@ -222,11 +259,6 @@ export default function HomeScreen() {
       </LinearGradient>
     );
   }
-
-  const playerTranslateY = playerFloat.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -3],
-  });
 
   return (
     <LinearGradient
@@ -467,5 +499,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 14,
+    marginTop: 20,
   },
 });
